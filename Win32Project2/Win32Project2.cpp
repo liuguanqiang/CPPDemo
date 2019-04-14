@@ -163,12 +163,20 @@ string CheckCPUID(string json)
 		int vidIndex = cmdValue.find("VEN_", 0) + 4;
 		if (vidIndex >= 0)
 		{
-			vid = cmdValue.substr(vidIndex, 4);
+			int vidaddIndex = cmdValue.find("&", vidIndex);
+			if (vidaddIndex > 0)
+			{
+				vid = cmdValue.substr(vidIndex, vidaddIndex - vidIndex);
+			}
 		}
 		int didIndex = cmdValue.find("DEV_", 0) + 4;
 		if (didIndex >= 0)
 		{
-			did = cmdValue.substr(didIndex, 4);
+			int didaddIndex = cmdValue.find("&", didIndex);
+			if (didaddIndex > 0)
+			{
+				did = cmdValue.substr(didIndex, didaddIndex - didIndex);
+			}
 		}
 		if (vid == "" || did == "")
 		{
@@ -220,7 +228,6 @@ void ReadJsonFile(string appDir)
 	HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
 	if (result == S_OK)
 	{
-		appDir = "C:\\Program Files (x86)\\∫ÀÃ“±‡≥Ã";
 		string packagePath = appDir + "\\package.json";
 		string htfile = strcat(my_documents, "\\ht.json");
 		ifstream fin;
@@ -238,14 +245,13 @@ void ReadJsonFile(string appDir)
 			{
 				return;
 			}
-			string htfile1 = "E:\\PNPDeviceID.json";
+			string htfile1 = "C:\\PNPDeviceID.json";
 			ifstream fin;
 			fin.open(htfile1);
 			if (!fin)
 			{
 				return;
 			}
-			//"chromium-args" : "--ignore-gpu-blacklist1234",
 			ostringstream ostring;
 			ostring << fin.rdbuf();
 			fin.close();

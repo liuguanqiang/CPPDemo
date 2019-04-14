@@ -39,6 +39,7 @@ bool Json_ReadBool(Json::Value JV, bool ori_value = true);
 void WriteJsonFile();
 void ReadJsonFile(string appDir);
 void UpdatePackageJsonFile(string path, string chromiumValue);
+void PNPDeviceIDUpdatePackageJsonFile(string path);
 string UTF8ToGB(const char* str);
 string CheckCPUID(string json);
 
@@ -184,13 +185,14 @@ string CheckCPUID(string json)
 		}
 		Json::CharReaderBuilder builder;
 		Json::CharReader* JsonReader(builder.newCharReader());
-		Json::Value valRoot, ObjectTmp;
+		Json::Value root, ObjectTmp;
 		JSONCPP_STRING errs;
 		const char* pstr = json.c_str();
-		if (!JsonReader->parse(pstr, pstr + strlen(pstr), &valRoot, &errs))
+		if (!JsonReader->parse(pstr, pstr + strlen(pstr), &root, &errs))
 		{
 			return false;
 		}
+		Json::Value valRoot = root["blackList"];
 		Json::Value::Members members = valRoot.getMemberNames();
 		for (Json::Value::Members::iterator iterMember = members.begin(); iterMember != members.end(); iterMember++)   // 遍历每个key
 		{
@@ -228,40 +230,14 @@ void ReadJsonFile(string appDir)
 	HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
 	if (result == S_OK)
 	{
+		//appDir = "C:\\Program Files (x86)\\核桃编程";
 		string packagePath = appDir + "\\package.json";
 		string htfile = strcat(my_documents, "\\ht.json");
 		ifstream fin;
 		fin.open(htfile);
 		if (!fin)
 		{
-			//__cpuidex(dwBuf, 1, 1);
-			//char szTmp[33] = { NULL };
-			//sprintf(szTmp, "%08X%08X", dwBuf[3], dwBuf[0]);
-			//string cpuID = szTmp;
-			CWininetHttp whttp = CWininetHttp();
-			string url = "https://config.hetao101.com/scratch3/prod/windows/0.0.1.json";
-			string json = whttp.RequestJsonInfo(url, Hr_Get, "", "");
-			if (json == "")
-			{
-				return;
-			}
-			string htfile1 = "C:\\PNPDeviceID.json";
-			ifstream fin;
-			fin.open(htfile1);
-			if (!fin)
-			{
-				return;
-			}
-			ostringstream ostring;
-			ostring << fin.rdbuf();
-			fin.close();
-			string strContext = ostring.str();
-
-			string argsName = CheckCPUID(strContext);
-			if (argsName != "")
-			{
-				UpdatePackageJsonFile(packagePath, argsName);
-			}
+			PNPDeviceIDUpdatePackageJsonFile(packagePath);
 			return;
 		}
 
@@ -334,6 +310,79 @@ void UpdatePackageJsonFile(string path, string chromiumValue)
 		return;
 	}
 	JsonRoot["chromium-args"] = Json::Value(chromiumValue);
+	ofstream fout(path);
+	if (fout)
+	{
+		string strContext;
+		strContext = JsonRoot.toStyledString();
+		fout << strContext;
+		fout.close();
+	}
+}
+
+//通过黑名单检测更新PackageJson
+void PNPDeviceIDUpdatePackageJsonFile(string path)
+{
+	ifstream fin;
+	fin.open(path);
+	if (!fin)
+	{
+		return;
+	}
+	ostringstream ostring;
+	ostring << fin.rdbuf();
+	fin.close();
+	string strContext = ostring.str();
+	Json::CharReaderBuilder builder;
+	Json::CharReader* JsonReader(builder.newCharReader());
+	Json::Value JsonRoot, ObjectTmp;
+	JSONCPP_STRING errs;
+	const char* pstr = strContext.c_str();
+	if (!JsonReader->parse(pstr, pstr + strlen(pstr), &JsonRoot, &errs))
+	{
+		return;
+	}
+	string manifestUrl = Json_ReadString(JsonRoot["manifestUrl"]);
+	if (manifestUrl == "")
+	{
+		return;
+	}
+
+	CWininetHttp whttp = CWininetHttp();
+	string json = whttp.RequestJsonInfo(manifestUrl, Hr_Get, "", "");
+	if (json == "")
+	{
+		return;
+	}
+	string argsName = CheckCPUID(json);
+
+	//string pnpdPath = "C:\\PNPDeviceID.json";
+	//ifstream fin1;
+	//fin1.open(pnpdPath);
+	//if (!fin1)
+	//{
+	//	return;
+	//}
+	//ostringstream ostring1;
+	//ostring1 << fin1.rdbuf();
+	//fin1.close();
+	//string strContext1 = ostring1.str();
+	//Json::CharReaderBuilder builder1;
+	//Json::CharReader* JsonReader1(builder1.newCharReader());
+	//Json::Value JsonRoot1, ObjectTmp1;
+	//JSONCPP_STRING errs1;
+	//const char* pstr1 = strContext1.c_str();
+	//if (!JsonReader1->parse(pstr1, pstr1 + strlen(pstr1), &JsonRoot1, &errs1))
+	//{
+	//	return;
+	//}
+	//argsName = CheckCPUID(strContext1);
+
+	if (argsName == "")
+	{
+		return;
+	}
+	JsonRoot["chromium-args"] = Json::Value(argsName);
 	ofstream fout(path);
 	if (fout)
 	{

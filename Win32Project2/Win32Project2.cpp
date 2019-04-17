@@ -44,6 +44,8 @@ string UTF8ToGB(const char* str);
 string CheckCPUID(string json);
 
 string ExeCmd(string pszCmd);
+vector<string> split(const string& str, const string& delim);
+void trim(string &s);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -162,7 +164,7 @@ string CheckCPUID(string json)
 		string cmdValue = ExeCmd(cmd);
 		string vid = "", did = "";
 		int vidIndex = cmdValue.find("VEN_", 0) + 4;
-		if (vidIndex >= 0)
+		if (vidIndex >= 4)
 		{
 			int vidaddIndex = cmdValue.find("&", vidIndex);
 			if (vidaddIndex > 0)
@@ -171,7 +173,7 @@ string CheckCPUID(string json)
 			}
 		}
 		int didIndex = cmdValue.find("DEV_", 0) + 4;
-		if (didIndex >= 0)
+		if (didIndex >= 4)
 		{
 			int didaddIndex = cmdValue.find("&", didIndex);
 			if (didaddIndex > 0)
@@ -226,60 +228,74 @@ string CheckCPUID(string json)
 
 void ReadJsonFile(string appDir)
 {
-	CHAR my_documents[MAX_PATH];
-	HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
-	if (result == S_OK)
+	try
 	{
-		//appDir = "C:\\Program Files (x86)\\核桃编程";
-		string packagePath = appDir + "\\package.json";
-		string htfile = strcat(my_documents, "\\ht.json");
-		ifstream fin;
-		fin.open(htfile);
-		if (!fin)
+		CHAR my_documents[MAX_PATH];
+		HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
+		if (result == S_OK)
 		{
-			PNPDeviceIDUpdatePackageJsonFile(packagePath);
-			return;
-		}
+			//appDir = "C:\\Program Files (x86)\\核桃编程";
+			string packagePath = appDir + "\\package.json";
+			string htfile = strcat(my_documents, "\\ht.json");
+			ifstream fin;
+			fin.open(htfile);
+			if (!fin)
+			{
+				PNPDeviceIDUpdatePackageJsonFile(packagePath);
+				return;
+			}
 
-		ostringstream ostring;
-		ostring << fin.rdbuf();
-		fin.close();
-		string strContext = ostring.str();
-		Json::CharReaderBuilder builder;
-		Json::CharReader* JsonReader(builder.newCharReader());
-		Json::Value JsonRoot, ObjectTmp;
-		JSONCPP_STRING errs;
-		const char* pstr = strContext.c_str();
-		if (!JsonReader->parse(pstr, pstr + strlen(pstr), &JsonRoot, &errs))
-		{
-			return;
+			ostringstream ostring;
+			ostring << fin.rdbuf();
+			fin.close();
+			string strContext = ostring.str();
+			Json::CharReaderBuilder builder;
+			Json::CharReader* JsonReader(builder.newCharReader());
+			Json::Value JsonRoot, ObjectTmp;
+			JSONCPP_STRING errs;
+			const char* pstr = strContext.c_str();
+			if (!JsonReader->parse(pstr, pstr + strlen(pstr), &JsonRoot, &errs))
+			{
+				return;
+			}
+			string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
+			UpdatePackageJsonFile(packagePath, chromiumArgs);
 		}
-		string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
-		UpdatePackageJsonFile(packagePath, chromiumArgs);
+	}
+	catch (const std::exception&)
+	{
+
 	}
 }
 
-string UTF8ToGB(const char* str)
+
+vector<string> split(const string& str, const string& delim) {
+	vector<string> res;
+	if ("" == str) return res;
+	//先将要切割的字符串从string类型转换为char*类型  
+	char * strs = new char[str.length() + 1]; //不要忘了  
+	strcpy(strs, str.c_str());
+
+	char * d = new char[delim.length() + 1];
+	strcpy(d, delim.c_str());
+
+	char *p = strtok(strs, d);
+	while (p) {
+		string s = p; //分割得到的字符串转换为string类型  
+		res.push_back(s); //存入结果数组  
+		p = strtok(NULL, d);
+	}
+	return res;
+}
+
+void trim(string &s)
 {
-	string result;
-	WCHAR *strSrc;
-	LPSTR szRes;
-
-	//获得临时变量的大小
-	int i = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
-	strSrc = new WCHAR[i + 1];
-	MultiByteToWideChar(CP_UTF8, 0, str, -1, strSrc, i);
-
-	//获得临时变量的大小
-	i = WideCharToMultiByte(CP_ACP, 0, strSrc, -1, NULL, 0, NULL, NULL);
-	szRes = new CHAR[i + 1];
-	WideCharToMultiByte(CP_ACP, 0, strSrc, -1, szRes, i, NULL, NULL);
-
-	result = szRes;
-	delete[]strSrc;
-	delete[]szRes;
-
-	return result;
+	if (s.empty())
+	{
+		return;
+	}
+	s.erase(0, s.find_first_not_of(" "));
+	s.erase(s.find_last_not_of(" ") + 1);
 }
 
 
@@ -304,12 +320,27 @@ void UpdatePackageJsonFile(string path, string chromiumValue)
 	{
 		return;
 	}
-	string oldChromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
-	if (oldChromiumArgs == chromiumValue)
+	string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
+	vector<string> chromiumValueList = split(chromiumValue, " ");
+	for (size_t i = 0; i < chromiumValueList.size(); i++)
 	{
-		return;
+		string chromium = chromiumValueList[i];
+		int didIndex = chromiumArgs.find(chromium, 0);
+		if (didIndex >= 0)
+		{
+			continue;
+		}
+		else
+		{
+			if (chromiumArgs != "")
+			{
+				chromiumArgs += " ";
+			}
+			chromiumArgs += chromium;
+			JsonRoot["chromium-args"] = Json::Value(chromiumArgs);
+		}
 	}
-	JsonRoot["chromium-args"] = Json::Value(chromiumValue);
+
 	ofstream fout(path);
 	if (fout)
 	{
@@ -382,7 +413,21 @@ void PNPDeviceIDUpdatePackageJsonFile(string path)
 	{
 		return;
 	}
-	JsonRoot["chromium-args"] = Json::Value(argsName);
+	string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
+	int didIndex = chromiumArgs.find(argsName, 0);
+	if (didIndex >= 0)
+	{
+		return;
+	}
+	else
+	{
+		if (chromiumArgs != "")
+		{
+			chromiumArgs += " ";
+		}
+		chromiumArgs += argsName;
+		JsonRoot["chromium-args"] = Json::Value(chromiumArgs);
+	}
 	ofstream fout(path);
 	if (fout)
 	{
@@ -391,6 +436,29 @@ void PNPDeviceIDUpdatePackageJsonFile(string path)
 		fout << strContext;
 		fout.close();
 	}
+}
+
+string UTF8ToGB(const char* str)
+{
+	string result;
+	WCHAR *strSrc;
+	LPSTR szRes;
+
+	//获得临时变量的大小
+	int i = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+	strSrc = new WCHAR[i + 1];
+	MultiByteToWideChar(CP_UTF8, 0, str, -1, strSrc, i);
+
+	//获得临时变量的大小
+	i = WideCharToMultiByte(CP_ACP, 0, strSrc, -1, NULL, 0, NULL, NULL);
+	szRes = new CHAR[i + 1];
+	WideCharToMultiByte(CP_ACP, 0, strSrc, -1, szRes, i, NULL, NULL);
+
+	result = szRes;
+	delete[]strSrc;
+	delete[]szRes;
+
+	return result;
 }
 
 

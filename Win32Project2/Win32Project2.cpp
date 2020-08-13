@@ -65,6 +65,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CString str1(lpCmdLine);
 	std::string STDStr(CW2A(str1.GetString()));
 	string appDir = STDStr;
+	//appDir = "C:\\Program Files (x86)\\hetaobiancheng";
 	ReadJsonFile(appDir);
 
 	// 执行应用程序初始化: 
@@ -194,25 +195,28 @@ string CheckCPUID(string json)
 		{
 			return false;
 		}
-		Json::Value valRoot = root["blackList"];
-		Json::Value::Members members = valRoot.getMemberNames();
+		//Json::Value valRoot = root["blackList"];
+		Json::Value::Members members = root.getMemberNames();
 		for (Json::Value::Members::iterator iterMember = members.begin(); iterMember != members.end(); iterMember++)   // 遍历每个key
 		{
 			string strKey = *iterMember;
-			Json::Value child = valRoot[strKey];
+			Json::Value child = root[strKey];
 			Json::Value::Members childmembers1 = child.getMemberNames();
 			for (Json::Value::Members::iterator childMember1 = childmembers1.begin(); childMember1 != childmembers1.end(); childMember1++)   // 遍历子节点每个key
 			{
 				string childKey = *childMember1;
 				if (childKey == vid)
 				{
-					int t_size = valRoot[strKey][childKey].size();
+					int t_size = root[strKey][childKey].size();
 					for (int i = 0; i < t_size; ++i)
 					{
-						if (did == Json_ReadString(valRoot[strKey][childKey][i]))
+						string http_did = Json_ReadString(root[strKey][childKey][i]);
+						if (did == http_did)
 						{
-							argsName = strKey;
-							return argsName;
+							if (argsName != "")
+								argsName += " ";
+							argsName += strKey;
+							break;
 						}
 					}
 				}
@@ -234,14 +238,14 @@ void ReadJsonFile(string appDir)
 		HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
 		if (result == S_OK)
 		{
-			//appDir = "C:\\Program Files (x86)\\核桃编程";
-			string packagePath = appDir + "\\package.json";
+			string packagePath = appDir + "\\resources\\config";
 			string htfile = strcat(my_documents, "\\ht.json");
 			ifstream fin;
 			fin.open(htfile);
 			if (!fin)
 			{
-				PNPDeviceIDUpdatePackageJsonFile(packagePath);
+				//新版本electron客户端  服务器黑名单不在此处理
+				//PNPDeviceIDUpdatePackageJsonFile(packagePath);
 				return;
 			}
 
@@ -258,7 +262,7 @@ void ReadJsonFile(string appDir)
 			{
 				return;
 			}
-			string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
+			string chromiumArgs = Json_ReadString(JsonRoot["chromiumArgs"]);
 			UpdatePackageJsonFile(packagePath, chromiumArgs);
 		}
 	}
@@ -320,7 +324,7 @@ void UpdatePackageJsonFile(string path, string chromiumValue)
 	{
 		return;
 	}
-	string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
+	string chromiumArgs = Json_ReadString(JsonRoot["chromiumArgs"]);
 	vector<string> chromiumValueList = split(chromiumValue, " ");
 	for (size_t i = 0; i < chromiumValueList.size(); i++)
 	{
@@ -337,9 +341,9 @@ void UpdatePackageJsonFile(string path, string chromiumValue)
 				chromiumArgs += " ";
 			}
 			chromiumArgs += chromium;
-			JsonRoot["chromium-args"] = Json::Value(chromiumArgs);
 		}
 	}
+	JsonRoot["chromiumArgs"] = Json::Value(chromiumArgs);
 
 	ofstream fout(path);
 	if (fout)
@@ -373,20 +377,20 @@ void PNPDeviceIDUpdatePackageJsonFile(string path)
 	{
 		return;
 	}
-	string manifestUrl = Json_ReadString(JsonRoot["manifestUrl"]);
-	if (manifestUrl == "")
+	string blackListUrl = Json_ReadString(JsonRoot["blackListUrl"]);
+	if (blackListUrl == "")
 	{
 		return;
 	}
-
 	CWininetHttp whttp = CWininetHttp();
-	string json = whttp.RequestJsonInfo(manifestUrl, Hr_Get, "", "");
+	string json = whttp.RequestJsonInfo(blackListUrl, Hr_Get, "", "");
 	if (json == "")
 	{
 		return;
 	}
-	string argsName = CheckCPUID(json);
+	string argsNames = CheckCPUID(json);
 
+	//string argsNames ="";
 	//string pnpdPath = "C:\\PNPDeviceID.json";
 	//ifstream fin1;
 	//fin1.open(pnpdPath);
@@ -407,27 +411,32 @@ void PNPDeviceIDUpdatePackageJsonFile(string path)
 	//{
 	//	return;
 	//}
-	//argsName = CheckCPUID(strContext1);
+	//argsNames = CheckCPUID(strContext1);
 
-	if (argsName == "")
+	if (argsNames == "")
 	{
 		return;
 	}
 	string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
-	int didIndex = chromiumArgs.find(argsName, 0);
-	if (didIndex >= 0)
+	vector<string> argsNameList = split(argsNames, " ");
+	for (size_t i = 0; i < argsNameList.size(); i++)
 	{
-		return;
-	}
-	else
-	{
-		if (chromiumArgs != "")
+		string argsName = argsNameList[i];
+		int didIndex = chromiumArgs.find(argsName, 0);
+		if (didIndex >= 0)
 		{
-			chromiumArgs += " ";
+			continue;
 		}
-		chromiumArgs += argsName;
-		JsonRoot["chromium-args"] = Json::Value(chromiumArgs);
+		else
+		{
+			if (chromiumArgs != "")
+			{
+				chromiumArgs += " ";
+			}
+			chromiumArgs += argsName;
+		}
 	}
+	JsonRoot["chromium-args"] = Json::Value(chromiumArgs);
 	ofstream fout(path);
 	if (fout)
 	{

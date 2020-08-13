@@ -54,7 +54,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CString str1(lpCmdLine);
 	std::string STDStr(CW2A(str1.GetString()));
 	string appDir = STDStr;
-	//string appDir = "C:\\Program Files (x86)\\核桃编程";
+	//appDir= "C:\\Program Files (x86)\\hetaobiancheng";
 	ReadJsonFile(appDir);
 
 	// 执行应用程序初始化: 
@@ -83,12 +83,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 void ReadJsonFile(string appDir)
 {
-	string htfile = appDir + "\\package.json";
+	string chromiumArgsKey =  "chromiumArgs";
+	string htfile = appDir + "\\resources\\config";
 	ifstream fin;
 	fin.open(htfile);
 	if (!fin)
 	{
-		return;
+		//如果是第一次安装electron客户端  去找一次原来nw存下的信息
+		htfile = "C:\\Program Files (x86)\\核桃编程python\\package.json";
+		chromiumArgsKey = "chromium-args";
+		fin.open(htfile);
+		if (!fin) {
+			return;
+		}
 	}
 	//"chromium-args" : "--ignore-gpu-blacklist1234",
 	ostringstream ostring;
@@ -104,7 +111,7 @@ void ReadJsonFile(string appDir)
 	{
 		return;
 	}
-	string chromiumArgs = Json_ReadString(JsonRoot["chromium-args"]);
+	string chromiumArgs = Json_ReadString(JsonRoot[chromiumArgsKey]);
 	if (chromiumArgs == "")
 		return;
 	WriteJsonFile(chromiumArgs);
@@ -144,7 +151,7 @@ void WriteJsonFile(string chromiumArgs)
 		// 声明Json变量，这个作为根
 		Json::Value JsonRoot;
 		// 写入字符串
-		JsonRoot["chromium-args"] = Json::Value(chromiumArgs);
+		JsonRoot["chromiumArgs"] = Json::Value(chromiumArgs);
 		string htfile = strcat(my_documents, "\\ht.json");
 		// 生成Json文件储存
 		ofstream fout(htfile);

@@ -23,18 +23,18 @@ void KillAllProcess();
 //读取超时
 bool isTimeOut = false;
 DWORD processId = 0;
-char * processName = "核桃编程.exe";
-//LPCSTR appFilePath = "核桃编程.exe";
-LPCSTR appFilePath = "C:\\hetao\\hetaoScratch\\核桃编程.exe";
+char * processName = "Hetao.exe";
+LPCSTR appFilePath = "Hetao.exe";
+//LPCSTR appFilePath = "C:\\hetao\\hetaoScratch\\hetao.exe";
 
 int main()
 {
-	HANDLE hMutex = CreateMutex(NULL, FALSE, _T("核桃编程Launcher"));
+	HANDLE hMutex = CreateMutex(NULL, FALSE, _T("HetaoLauncher"));
 	try
 	{
 		//判断Launcher是否已经启动，防止用户多次点击重复启动
 		if (GetLastError() == ERROR_ALREADY_EXISTS) {
-			printf("核桃编程Launcher已经启动\n");
+			printf("launcher已经启动\n");
 			CloseHandle(hMutex);
 			return 0;
 		}

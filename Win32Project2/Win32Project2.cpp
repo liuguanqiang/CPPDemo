@@ -36,7 +36,6 @@ int Json_ReadInt(Json::Value JV, int ori_value = 0);
 double Json_ReadDouble(Json::Value JV, double ori_value = 0.0);
 string Json_ReadString(Json::Value JV, string ori_value = "");
 bool Json_ReadBool(Json::Value JV, bool ori_value = true);
-void WriteJsonFile();
 void ReadJsonFile(string appDir);
 void UpdatePackageJsonFile(string path, string chromiumValue);
 void PNPDeviceIDUpdatePackageJsonFile(string path);
@@ -65,6 +64,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CString str1(lpCmdLine);
 	std::string STDStr(CW2A(str1.GetString()));
 	string appDir = STDStr;
+	//string appDir = "C:\\hetao\\hetaoScratch";
 	ReadJsonFile(appDir);
 
 	// 执行应用程序初始化: 
@@ -194,26 +194,21 @@ string CheckCPUID(string json)
 		{
 			return false;
 		}
-		Json::Value valRoot = root["blackList"];
+		Json::Value valRoot = root["--disable-gpu"];
 		Json::Value::Members members = valRoot.getMemberNames();
 		for (Json::Value::Members::iterator iterMember = members.begin(); iterMember != members.end(); iterMember++)   // 遍历每个key
 		{
 			string strKey = *iterMember;
-			Json::Value child = valRoot[strKey];
-			Json::Value::Members childmembers1 = child.getMemberNames();
-			for (Json::Value::Members::iterator childMember1 = childmembers1.begin(); childMember1 != childmembers1.end(); childMember1++)   // 遍历子节点每个key
+			if (strKey == vid)
 			{
-				string childKey = *childMember1;
-				if (childKey == vid)
+				int t_size = valRoot[strKey].size();
+				for (int i = 0; i < t_size; ++i)
 				{
-					int t_size = valRoot[strKey][childKey].size();
-					for (int i = 0; i < t_size; ++i)
+					string didKey = Json_ReadString(valRoot[strKey][i]);
+					if (did == didKey)
 					{
-						if (did == Json_ReadString(valRoot[strKey][childKey][i]))
-						{
-							argsName = strKey;
-							return argsName;
-						}
+						argsName = "--disable-gpu";
+						return argsName;
 					}
 				}
 			}
@@ -234,7 +229,6 @@ void ReadJsonFile(string appDir)
 		HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
 		if (result == S_OK)
 		{
-			//appDir = "C:\\Program Files (x86)\\核桃编程";
 			string packagePath = appDir + "\\package.json";
 			string htfile = strcat(my_documents, "\\ht.json");
 			ifstream fin;
@@ -373,12 +367,7 @@ void PNPDeviceIDUpdatePackageJsonFile(string path)
 	{
 		return;
 	}
-	string manifestUrl = Json_ReadString(JsonRoot["manifestUrl"]);
-	if (manifestUrl == "")
-	{
-		return;
-	}
-
+	string manifestUrl ="https://config.hetao101.com/scratch3/dev/cocos-client/gpuBlackList.json";
 	CWininetHttp whttp = CWininetHttp();
 	string json = whttp.RequestJsonInfo(manifestUrl, Hr_Get, "", "");
 	if (json == "")
@@ -461,54 +450,6 @@ string UTF8ToGB(const char* str)
 	return result;
 }
 
-
-void WriteJsonFile()
-{
-	CHAR my_documents[MAX_PATH];
-	HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
-	// 声明Json变量，这个作为根
-	Json::Value JsonRoot;
-	// 写入字符串
-	JsonRoot["name"] = Json::Value(my_documents);
-	// 写入整型
-	JsonRoot["age"] = Json::Value(22);
-	// 写入浮点型数字
-	JsonRoot["height"] = Json::Value(1.78);
-	// 写入布尔型
-	JsonRoot["play_football"] = Json::Value(true);
-	// 写入Json对象
-	Json::Value JsonObj;
-	JsonObj["sometime"] = Json::Value(2018);
-	JsonObj["someone"] = Json::Value("Kelly");
-	JsonObj["somewhere"] = Json::Value("city");
-	JsonRoot["object"] = JsonObj;
-	// 单个键写入数字数组
-	JsonRoot["number_array"].append(1);
-	JsonRoot["number_array"].append(2);
-	JsonRoot["number_array"].append(3);
-	JsonRoot["number_array"].append(4);
-	// 单个键写入字符串数组
-	JsonRoot["string_array"].append("string01");
-	JsonRoot["string_array"].append("string02");
-	JsonRoot["string_array"].append("string03");
-	// 写入Json对象数组，即数组由对象构成
-	Json::Value JsonArr1, JsonArr2, JsonArr3;
-	JsonArr1["string1"] = Json::Value("1-1");
-	JsonArr2["string1"] = Json::Value("2-1");
-	JsonArr3["string1"] = Json::Value("3-1");
-	JsonRoot["object_array"].append(JsonArr1);
-	JsonRoot["object_array"].append(JsonArr2);
-	JsonRoot["object_array"].append(JsonArr3);
-	// 生成Json文件储存
-	ofstream fout("E:\\jsonfile.json");
-	if (fout)
-	{
-		string strContext;
-		strContext = JsonRoot.toStyledString();
-		fout << strContext;
-		fout.close();
-	}
-}
 
 ///////////////////////////////////////////////////
 int Json_ReadInt(Json::Value JV, int ori_value)

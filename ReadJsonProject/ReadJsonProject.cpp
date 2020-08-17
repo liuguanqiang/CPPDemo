@@ -54,7 +54,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CString str1(lpCmdLine);
 	std::string STDStr(CW2A(str1.GetString()));
 	string appDir = STDStr;
-	//string appDir = "C:\\Program Files (x86)\\核桃编程";
+	//string appDir = "C:\\hetao\\hetaoScratch";
 	ReadJsonFile(appDir);
 
 	// 执行应用程序初始化: 

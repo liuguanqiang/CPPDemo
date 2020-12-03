@@ -235,7 +235,7 @@ void ReadJsonFile(string appDir)
 			fin.open(htfile);
 			if (!fin)
 			{
-				PNPDeviceIDUpdatePackageJsonFile(packagePath);
+				//PNPDeviceIDUpdatePackageJsonFile(packagePath);
 				return;
 			}
 

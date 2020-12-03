@@ -54,7 +54,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	CString str1(lpCmdLine);
 	std::string STDStr(CW2A(str1.GetString()));
 	string appDir = STDStr;
-	//string appDir = "C:\\hetao\\hetaoScratch";
+	//string appDir = "C:\\hetao\\hetaoProgram";
 	ReadJsonFile(appDir);
 
 	// 执行应用程序初始化: 
@@ -88,7 +88,14 @@ void ReadJsonFile(string appDir)
 	fin.open(htfile);
 	if (!fin)
 	{
-		return;
+		fin.close();
+		htfile = "C:\\hetao\\hetaoScratch\\package.json";
+		fin.open(htfile);
+		if (!fin)
+		{
+			fin.close();
+			return;
+		}
 	}
 	//"chromium-args" : "--ignore-gpu-blacklist1234",
 	ostringstream ostring;
